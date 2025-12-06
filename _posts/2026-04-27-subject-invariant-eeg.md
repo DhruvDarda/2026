@@ -61,7 +61,7 @@ This attempt to decouple subject-specific noise (like age) and long-range sequen
 ## The HBN Dataset & Challenge
 
 
-{% include figure.liquid path="assets/img/2026-04-27-subject-invariant-eeg/EEG_Challenge_2025.png" class="img-fluid h-80" caption="Figure 1: EEG Challenge 2025." %}<d-cite key="aristimunha2025eeg"></d-cite>
+{% include figure.liquid path="assets/img/2026-04-27-subject-invariant-eeg/eeg_challenge_2025.png" class="img-fluid h-80" caption="Figure 1: EEG Challenge 2025." %}<d-cite key="aristimunha2025eeg"></d-cite>
 
 
 The competition utilized the Healthy Brain Network (HBN) dataset <d-cite key="alexander2017hbn"></d-cite>, comprising recordings from over 3,000 participants.
@@ -339,14 +339,14 @@ We entered the competition late (4 weeks prior to deadline), limiting our abilit
 
   <div class="col-sm-6 d-flex justify-content-center">
     {% include figure.liquid 
-         path="assets/img/2026-04-27-subject-invariant-eeg/Challenge1_score.png" 
+         path="assets/img/2026-04-27-subject-invariant-eeg/challenge1_score.png" 
          class="img-fluid" 
          caption="Figure 5: Our score and comparison to near-by entries in Challenge 1." %}
   </div>
 
   <div class="col-sm-6 d-flex justify-content-center">
     {% include figure.liquid 
-         path="assets/img/2026-04-27-subject-invariant-eeg/Challenge2_score.png" 
+         path="assets/img/2026-04-27-subject-invariant-eeg/challenge2_score.png" 
          class="img-fluid" 
          caption="Figure 6: Our score and comparison to near-by entries in Challenge 2." %}
   </div>
