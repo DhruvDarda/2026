@@ -2,7 +2,7 @@
 layout: distill
 title: "The Decoupling Hypothesis: Attempting Subject-Invariant EEG Representation Learning via Auxiliary Injection"
 description: "We explore several ideas for learning subject-invariant EEG representations for reaction time and psychopathology prediction using only 2-second windows in the NeurIPS 2025 EEG Challenge. The core of our approach is the Decoupling Hypothesis: an autoencoder framework where we attempt to disentangle subject-specific artifacts and long-term temporal trends (such as fatigue) from the neural signal by explicitly injecting 'nuisance' variables (like demographics and sequence position) into the decoder. This method aimed to force a purely convolutional encoder to learn slow, sequential features without relying on computationally expensive Recurrent or Attention mechanisms. This blog discusses the ideas that seemed promising but ultimately did not work as intended—and why." 
-date: 2026-02-01
+date: 2026-04-27
 future: true
 htmlwidgets: true
 hidden: false
@@ -18,7 +18,7 @@ authors:
     affiliations:
       name: [Anonymous]
 
-bibliography: 2026-05-01-eeg-invariance.bib
+bibliography: 2026-04-27-Subject-Invariant-EEG.bib
 
 toc:
   - name: Introduction
@@ -50,7 +50,7 @@ While we didn't take the top spot, our approach attempted to solve a fundamental
 
 The core challenge with short, 2-second windows is capturing slow morphological trends in the EEG. While a 200-sample window (at 100 Hz) easily captures higher frequencies like Beta (13-30 Hz) or Alpha (8-12 Hz), it fundamentally limits the resolution of slow waves such as deep sleep Delta waves (~0.5–2 Hz).
 
-{% include figure.liquid path="assets/img/2026-04-01-Subject-Invariant-EEG/brainwaves.png" class="img-fluid" caption="Figure 1: Visualization of different types of brainwaves, which are electrical pulses in the brain that communicate information, categorized by their frequency. Each wave type is depicted with its characteristic pattern, and a timeline at the bottom provides a scale for one second." %}
+{% include figure.liquid path="assets/img/2026-04-01-Subject-Invariant-EEG/brainwaves.png" class="img-fluid h-50" caption="Figure 1: Visualization of different types of brainwaves, which are electrical pulses in the brain that communicate information, categorized by their frequency. Each wave type is depicted with its characteristic pattern, and a timeline at the bottom provides a scale for one second." %}
 <d-cite key="neurips2025eeg"></d-cite>
 
 Typically, capturing these long-range temporal dependencies requires explicit sequential models like Recurrent Neural Networks (RNNs) or Attention mechanisms.
@@ -155,7 +155,7 @@ $$
 where \( $ A, B \in \mathbb{R}^{B \times T \times d} $ \) are flattened feature maps.
 
 
-{% include figure.liquid path="assets/img/2026-04-01-Subject-Invariant-EEG/model_architecture.png" class="img-fluid" caption="Figure 2: The proposed architecture. Note the Auxiliary Encoder injecting demographics and sequence position directly into the latent space before decoding." %}
+{% include figure.liquid path="assets/img/2026-04-01-Subject-Invariant-EEG/model_architecture.png" class="img-fluid w-80 h-70" caption="Figure 2: The proposed architecture. Note the Auxiliary Encoder injecting demographics and sequence position directly into the latent space before decoding." %}
 
 ### Auxiliary Injection & Disentanglement
 
@@ -208,18 +208,59 @@ This acts as a soft attention mechanism, upweighting signals from sparser region
 
 Each task contains additional metadata such as correctness, contrast values, movie identifiers, etc. To further regularize the latent space, we utilized these known task structures to generate "pseudo-labels." Even though the competition goal was reaction time, predicting the *state* of the experiment forces the model to recognize which neural circuits are active.
 
-We attached 6 task-specific heads to the encoder output.
+<div class="row">
 
-| Task | Pseudo-Labels Generated |
-| :--- | :--- |
-| **Contrast Change** | `Contrast_left_side` (binary), `Contrast_correct`, `Reaction_time` |
-| **Symbol Search** | `Contrast_correct` (binary) |
-| **Surround Supp.** | `Background_type`, `Foreground_contrast`, `Stimulus_cond` |
-| **Seq. Learning** | `Correct_count`, `Target_count`, `Learning_phase` (binary) |
-| **Resting State** | `Eyes_closed` (binary - derived from onset times) |
-| **Movies** | One-hot encoded movie segment identifiers |
+  <!-- Left column: Image (25%) -->
+  <div class="col-sm-3 d-flex align-items-center justify-content-center">
+    {% include figure.liquid 
+         path="assets/img/2026-04-01-Subject-Invariant-EEG/mtl_head.png" 
+         class="img-fluid" 
+         caption="Figure 4: Task-specific prediction head." %}
+  </div>
 
-{% include figure.liquid path="assets/img/2026-04-01-Subject-Invariant-EEG/mtl_head.png" class="img-fluid" caption="Figure 4: Individual head for each task for predicting those pseudo labels." %}
+
+  <!-- Right column: Table (75%) -->
+  <div class="col-sm-9">
+    <p>We attached 6 task-specific heads to the encoder's latent.</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Task</th>
+          <th>Pseudo-Labels Generated</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Contrast Change</strong></td>
+          <td><code>Contrast_left_side</code> (binary), <code>Contrast_correct</code>, <code>Reaction_time</code></td>
+        </tr>
+        <tr>
+          <td><strong>Symbol Search</strong></td>
+          <td><code>Contrast_correct</code> (binary)</td>
+        </tr>
+        <tr>
+          <td><strong>Surround Supp.</strong></td>
+          <td><code>Background_type</code>, <code>Foreground_contrast</code>, <code>Stimulus_cond</code></td>
+        </tr>
+        <tr>
+          <td><strong>Seq. Learning</strong></td>
+          <td><code>Correct_count</code>, <code>Target_count</code>, <code>Learning_phase</code> (binary)</td>
+        </tr>
+        <tr>
+          <td><strong>Resting State</strong></td>
+          <td><code>Eyes_closed</code> (binary - derived from onset times)</td>
+        </tr>
+        <tr>
+          <td><strong>Movies</strong></td>
+          <td>One-hot encoded movie segment identifiers</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
 
 ## Loss Landscape
 
@@ -250,9 +291,24 @@ We entered the competition late (4 weeks prior to deadline), limiting our abilit
 ### Performance
 
 
-{% include figure.liquid path="assets/img/2026-04-01-Subject-Invariant-EEG/Challenge1_score.png" class="img-fluid" caption="Figure 5: Our score and comparison to other near by scores in Challenge 1" %}
+<div class="row">
 
-{% include figure.liquid path="assets/img/2026-04-01-Subject-Invariant-EEG/Challenge2_score.png" class="img-fluid" caption="Figure 6: Our score and comparison to other near by scores in Challenge 2" %}
+  <div class="col-sm-6 d-flex justify-content-center">
+    {% include figure.liquid 
+         path="assets/img/2026-04-01-Subject-Invariant-EEG/Challenge1_score.png" 
+         class="img-fluid" 
+         caption="Figure 5: Our score and comparison to near-by entries in Challenge 1." %}
+  </div>
+
+  <div class="col-sm-6 d-flex justify-content-center">
+    {% include figure.liquid 
+         path="assets/img/2026-04-01-Subject-Invariant-EEG/Challenge2_score.png" 
+         class="img-fluid" 
+         caption="Figure 6: Our score and comparison to near-by entries in Challenge 2." %}
+  </div>
+
+</div>
+
 
 
 | Metric | Our Score | Top scores | Rank |
@@ -279,9 +335,3 @@ Moving forward, we plan to:
 1.  **Benchmark on the Test Set:** Once the full labels are released, we will verify if the spatial scaling offers robustness on out-of-distribution subjects.
 2.  **Replace Manual Auxiliaries:** Instead of manually coding positions, we are exploring **Learnable Time Embeddings** (like in Transformers) that can adapt to the non-linear fatigue patterns of the brain.
 3.  **Graph Neural Networks:** Replace the distance-based scaling with an explicit Graph Attention Network (GAT) to model the electrode topology dynamically.
-
-# References
-
-The full BibTeX is included in `2026-04-27-Subject-Invariant-EEG.bib`.
-
----
