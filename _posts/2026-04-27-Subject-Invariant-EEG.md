@@ -1,7 +1,7 @@
 ---
 layout: distill
 title: "The Decoupling Hypothesis: Attempting Subject-Invariant EEG Representation Learning via Auxiliary Injection"
-description: "We explore several ideas for learning subject-invariant EEG representations for reaction time and psychopathology prediction using only 2-second windows in the NeurIPS 2025 EEG Challenge. This blog discusses the ideas that seemed promising but ultimately did not work as intended — and why." 
+description: "We explore several ideas for learning subject-invariant EEG representations for reaction time and psychopathology prediction using only 2-second windows in the NeurIPS 2025 EEG Challenge. The core of our approach is the Decoupling Hypothesis: an autoencoder framework where we attempt to disentangle subject-specific artifacts and long-term temporal trends (such as fatigue) from the neural signal by explicitly injecting 'nuisance' variables (like demographics and sequence position) into the decoder. This method aimed to force a purely convolutional encoder to learn slow, sequential features without relying on computationally expensive Recurrent or Attention mechanisms. This blog discusses the ideas that seemed promising but ultimately did not work as intended—and why." 
 date: 2026-02-01
 future: true
 htmlwidgets: true
@@ -13,10 +13,10 @@ mermaid:
   zoomable: true
 
 authors:
-  - name: [Dhruv Darda]
-    url: "https://www.infocusp.com/"
+  - name: [Anonymous]
+    url: "https://www.Anonymous.com/"
     affiliations:
-      name: [Infocusp Innovations]
+      name: [Anonymous]
 
 bibliography: 2026-05-01-eeg-invariance.bib
 
@@ -51,6 +51,7 @@ While we didn't take the top spot, our approach attempted to solve a fundamental
 The core challenge with short, 2-second windows is capturing slow morphological trends in the EEG. While a 200-sample window (at 100 Hz) easily captures higher frequencies like Beta (13-30 Hz) or Alpha (8-12 Hz), it fundamentally limits the resolution of slow waves such as deep sleep Delta waves (~0.5–2 Hz).
 
 {% include figure.liquid path="assets/img/2026-04-01-Subject-Invariant-EEG/brainwaves.png" class="img-fluid" caption="Figure 1: Visualization of different types of brainwaves, which are electrical pulses in the brain that communicate information, categorized by their frequency. Each wave type is depicted with its characteristic pattern, and a timeline at the bottom provides a scale for one second." %}
+<d-cite key="neurips2025eeg"></d-cite>
 
 Typically, capturing these long-range temporal dependencies requires explicit sequential models like Recurrent Neural Networks (RNNs) or Attention mechanisms.
 
@@ -154,7 +155,7 @@ $$
 where \( $ A, B \in \mathbb{R}^{B \times T \times d} $ \) are flattened feature maps.
 
 
-{% include figure.liquid path="assets/img/2026-04-01-Subject-Invariant-EEG/model_architecture.png" class="img-fluid" caption="Figure 1: The proposed architecture. Note the Auxiliary Encoder injecting demographics and sequence position directly into the latent space before decoding." %}
+{% include figure.liquid path="assets/img/2026-04-01-Subject-Invariant-EEG/model_architecture.png" class="img-fluid" caption="Figure 2: The proposed architecture. Note the Auxiliary Encoder injecting demographics and sequence position directly into the latent space before decoding." %}
 
 ### Auxiliary Injection & Disentanglement
 
@@ -201,7 +202,7 @@ $$
 
 This acts as a soft attention mechanism, upweighting signals from sparser regions or distinct lobes before they enter the dense layers of the decoder.
 
-{% include figure.liquid path="assets/img/2026-04-01-Subject-Invariant-EEG/before-and-after_visualization_soft_attention_mechanism.png" class="img-fluid" caption="Figure 1: Stabilization effect  of the soft attention mechanism using spatial information; before-and-after visualizations." %}
+{% include figure.liquid path="assets/img/2026-04-01-Subject-Invariant-EEG/before-and-after_visualization_soft_attention_mechanism.png" class="img-fluid" caption="Figure 3: Stabilization effect  of the soft attention mechanism using spatial information; before-and-after visualizations." %}
 
 ### Multi-Task Pseudo-Labeling
 
@@ -218,7 +219,7 @@ We attached 6 task-specific heads to the encoder output.
 | **Resting State** | `Eyes_closed` (binary - derived from onset times) |
 | **Movies** | One-hot encoded movie segment identifiers |
 
-{% include figure.liquid path="assets/img/2026-04-01-Subject-Invariant-EEG/mtl_head.png" class="img-fluid" caption="Figure 1: Individual head for each task for predicting those pseudo labels." %}
+{% include figure.liquid path="assets/img/2026-04-01-Subject-Invariant-EEG/mtl_head.png" class="img-fluid" caption="Figure 4: Individual head for each task for predicting those pseudo labels." %}
 
 ## Loss Landscape
 
@@ -249,9 +250,9 @@ We entered the competition late (4 weeks prior to deadline), limiting our abilit
 ### Performance
 
 
-{% include figure.liquid path="assets/img/2026-04-01-Subject-Invariant-EEG/Challenge1_score.png" class="img-fluid" caption="Figure 1: Our score and comparison to other near by scores in Challenge 1" %}
+{% include figure.liquid path="assets/img/2026-04-01-Subject-Invariant-EEG/Challenge1_score.png" class="img-fluid" caption="Figure 5: Our score and comparison to other near by scores in Challenge 1" %}
 
-{% include figure.liquid path="assets/img/2026-04-01-Subject-Invariant-EEG/Challenge2_score.png" class="img-fluid" caption="Figure 1: Our score and comparison to other near by scores in Challenge 2" %}
+{% include figure.liquid path="assets/img/2026-04-01-Subject-Invariant-EEG/Challenge2_score.png" class="img-fluid" caption="Figure 6: Our score and comparison to other near by scores in Challenge 2" %}
 
 
 | Metric | Our Score | Top scores | Rank |
