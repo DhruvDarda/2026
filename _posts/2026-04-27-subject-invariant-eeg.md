@@ -18,7 +18,7 @@ authors:
     affiliations:
       name: [Anonymous]
 
-bibliography: 2026-04-27-Subject-Invariant-EEG.bib
+bibliography: 2026-04-27-subject-invariant-eeg.bib
 
 toc:
   - name: Introduction
@@ -39,7 +39,7 @@ toc:
 
 Decoding the human brain is difficult; decoding it from short, noisy snippets of electrical activity is even harder.
 
-We recently participated in the NeurIPS 2025 EEG Benchmark Competition <d-cite key="neurips2025eeg"></d-cite>, a rigorous challenge designed to test the limits of EEG representation learning. The goal was to predict behavioral metrics (Reaction Times) and clinical diagnostics (Psychopathology Factors) using only 2-second windows of raw EEG signals.
+We recently participated in the NeurIPS 2025 EEG Benchmark Competition <d-cite key="aristimunha2025eeg"></d-cite>, a rigorous challenge designed to test the limits of EEG representation learning. The goal was to predict behavioral metrics (Reaction Times) and clinical diagnostics (Psychopathology Factors) using only 2-second windows of raw EEG signals.
 
 Out of many participating teams, our experimental architecture achieved:
 
@@ -50,8 +50,7 @@ While we didn't take the top spot, our approach attempted to solve a fundamental
 
 The core challenge with short, 2-second windows is capturing slow morphological trends in the EEG. While a 200-sample window (at 100 Hz) easily captures higher frequencies like Beta (13-30 Hz) or Alpha (8-12 Hz), it fundamentally limits the resolution of slow waves such as deep sleep Delta waves (~0.5–2 Hz).
 
-{% include figure.liquid path="assets/img/2026-04-01-Subject-Invariant-EEG/brainwaves.png" class="img-fluid h-50" caption="Figure 1: Visualization of different types of brainwaves, which are electrical pulses in the brain that communicate information, categorized by their frequency. Each wave type is depicted with its characteristic pattern, and a timeline at the bottom provides a scale for one second." %}
-<d-cite key="neurips2025eeg"></d-cite>
+{% include figure.liquid path="assets/img/2026-04-27-subject-invariant-eeg/brainwaves.png" class="img-fluid h-75" caption="Figure 0: Visualization of different types of brainwaves, which are electrical pulses in the brain that communicate information, categorized by their frequency. Each wave type is depicted with its characteristic pattern, and a timeline at the bottom provides a scale for one second." %}
 
 Typically, capturing these long-range temporal dependencies requires explicit sequential models like Recurrent Neural Networks (RNNs) or Attention mechanisms.
 
@@ -61,7 +60,11 @@ This attempt to decouple subject-specific noise (like age) and long-range sequen
 
 ## The HBN Dataset & Challenge
 
-The competition utilized the Healthy Brain Network (HBN) dataset <d-cite key="alexander2017healthy"></d-cite>, comprising recordings from over 3,000 participants.
+
+{% include figure.liquid path="assets/img/2026-04-27-subject-invariant-eeg/EEG_Challenge_2025.png" class="img-fluid h-80" caption="Figure 1: EEG Challenge 2025." %}<d-cite key="aristimunha2025eeg"></d-cite>
+
+
+The competition utilized the Healthy Brain Network (HBN) dataset <d-cite key="alexander2017hbn"></d-cite>, comprising recordings from over 3,000 participants.
 
 The data spans six distinct cognitive tasks, categorized into Passive and Active states:
 
@@ -90,9 +93,46 @@ Thus the core challenge was:
 
 > **Can we learn subject-invariant, task-invariant EEG embeddings from only 2 seconds of signal?**
 
-## The Hypothesis
+## Existing Self-Supervised Pretraining Approaches for EEG and Our Hypothesis 
 
-To learn robust representations, standard approaches include Masked Autoencoders (MAE) <d-cite key="he2022masked"></d-cite> or Contrastive Learning (SimCLR) <d-cite key="chen2020simple"></d-cite>. However, given the massive inter-subject variability and the varying, often irregular, lengths of the six different tasks in the HBN dataset, we hypothesized that the sequence position within a task is a strong and inconsistent bias we must account for.
+Self-supervised learning (SSL) has recently become the dominant paradigm for EEG pretraining, driven by the difficulty of obtaining large-scale labeled datasets.  
+Systematic surveys <d-cite key="weng2023ssl_eeg_survey"></d-cite>, <d-cite key="ding2023ssl_biomedical_review"></d-cite> categorize EEG SSL approaches into several broad families.
+
+#### 1. Masked Prediction–based Methods
+Inspired by Masked Autoencoders (MAE) <d-cite key="he2022masked"></d-cite>, EEG variants randomly mask temporal segments or channels and reconstruct the missing signal.  
+Examples include Masked Reconstruction models and channel dropout reconstruction used in EEGPT <d-cite key="eegpt2024arxiv"></d-cite>.
+
+#### 2. Contrastive Learning
+Contrastive learning (SimCLR-style) <d-cite key="chen2020simple"></d-cite> remains the most widely used EEG SSL framework.  
+Common contrastive EEG methods include:
+- **CPC / contrastive predictive coding** <d-cite key="oord2018cpc"></d-cite>  
+- **TS-TCC (Time-Series Temporal Contrastive Coding)** <d-cite key="tstcc2021"></d-cite>  
+- **CL-TCN / temporal instance discrimination** <d-cite key="banville2021cltcn"></d-cite>  
+
+These approaches create augmentations such as jittering, time-warping, filtering, or channel dropout to enforce invariance.
+
+#### 3. Bootstrap / Teacher–Student SSL
+Non-contrastive methods such as BYOL and VICReg have EEG extensions:
+- **BYOL-EEG** (bootstrapping features without negatives) <d-cite key="byol2020"></d-cite>  
+- **VICReg-style EEG regularization** <d-cite key="vicreg2022"></d-cite>  
+
+Such models avoid instability arising from contrastive negatives.
+
+#### 4. Clustering-Driven SSL
+Deep clustering and prototype assignment (DeepCluster-style) have been adapted to EEG:
+- **EEG-MixMatch clustering**  
+- **Prototype-contrastive EEG objectives** <d-cite key="prototype2021"></d-cite>  
+
+These aim to group similar neural states without labels.
+These methods encourage representations that align across physiological modalities.
+
+#### 5. Large-Scale Foundation Models
+Recent EEG foundation models such as **EEGPT** <d-cite key="eegpt2024arxiv"></d-cite> and **BC-SSL** <d-cite key="bcssl2023"></d-cite> combine several SSL components—masked modeling, temporal contrastive pretraining, and cross-task invariance—to produce universal EEG embeddings.
+
+Overall, SSL for EEG spans masked modeling, contrastive learning, non-contrastive bootstrapping, clustering, cross-modal pretraining, and large-scale foundation models.
+
+#### Our Hypothesis
+However, given the massive inter-subject variability and the varying, often irregular, lengths of the six different tasks in the HBN dataset, we hypothesized that the sequence position within a task is a strong and inconsistent bias we must account for.
 
 The traditional approach to handling sequence-dependent biases and long-range dependencies (like fatigue) is to use Recurrent Neural Networks (RNNs) or Transformer-based Attention mechanisms. While Attention mechanisms are powerful, they are highly compute-intensive, a significant limitation given our restricted budget. Furthermore, the non-uniformity of task lengths made designing a single, robust RNN architecture challenging.
 
@@ -145,6 +185,7 @@ We employ a multi-scale CNN approach to capture temporal features at different f
 $$
 H_0 = \text{Concat}(H_{k=1}, H_{k=15}, H_{k=45})
 $$
+
 2.  **Orthogonal Feature Extraction:** We utilize two distinct convolutional branches with differing dilation rates $(1, 2, 4, 16)$ to capture long-range dependencies.
 3.  **Orthogonality Constraint:** To ensure these branches learn distinct features, we minimize the Frobenius norm of their product.
 
@@ -152,10 +193,11 @@ $$
 \mathcal{L}_{\text{ortho}}
 = \left\| A^\top B \right\|_F^2
 $$
+
 where \( $ A, B \in \mathbb{R}^{B \times T \times d} $ \) are flattened feature maps.
 
 
-{% include figure.liquid path="assets/img/2026-04-01-Subject-Invariant-EEG/model_architecture.png" class="img-fluid w-80 h-70" caption="Figure 2: The proposed architecture. Note the Auxiliary Encoder injecting demographics and sequence position directly into the latent space before decoding." %}
+{% include figure.liquid path="assets/img/2026-04-27-subject-invariant-eeg/model_architecture.png" class="img-fluid w-80 h-70" caption="Figure 2: The proposed architecture. Note the Auxiliary Encoder injecting demographics and sequence position directly into the latent space before decoding." %}
 
 ### Auxiliary Injection & Disentanglement
 
@@ -180,9 +222,11 @@ This was the core of our "Cool Idea." We postulated that if we fed demographic d
 $$
 Encoder: z_{eeg} = E(x_{raw})
 $$
+
 $$
 Aux Encoder: z_{aux} = E_{aux}(x_{demo}, x_{pos})
 $$
+
 $$
 Decoder: \hat{x} = D(Concat(z_{eeg}, z_{aux}))
 $$
@@ -202,7 +246,7 @@ $$
 
 This acts as a soft attention mechanism, upweighting signals from sparser regions or distinct lobes before they enter the dense layers of the decoder.
 
-{% include figure.liquid path="assets/img/2026-04-01-Subject-Invariant-EEG/before-and-after_visualization_soft_attention_mechanism.png" class="img-fluid" caption="Figure 3: Stabilization effect  of the soft attention mechanism using spatial information; before-and-after visualizations." %}
+{% include figure.liquid path="assets/img/2026-04-27-subject-invariant-eeg/before-and-after_visualization_soft_attention_mechanism.png" class="img-fluid" caption="Figure 3: Stabilization effect  of the soft attention mechanism using spatial information; before-and-after visualizations." %}
 
 ### Multi-Task Pseudo-Labeling
 
@@ -213,7 +257,7 @@ Each task contains additional metadata such as correctness, contrast values, mov
   <!-- Left column: Image (25%) -->
   <div class="col-sm-3 d-flex align-items-center justify-content-center">
     {% include figure.liquid 
-         path="assets/img/2026-04-01-Subject-Invariant-EEG/mtl_head.png" 
+         path="assets/img/2026-04-27-subject-invariant-eeg/mtl_head.png" 
          class="img-fluid" 
          caption="Figure 4: Task-specific prediction head." %}
   </div>
@@ -272,7 +316,7 @@ $$
 
 Where:
 * $\mathcal{L}_{recon}$: MSE Reconstruction loss of the signal.
-* $\mathcal{L}_{scl}$: Supervised Contrastive Loss <d-cite key="khosla2020supervised"></d-cite> to cluster embeddings of the same task type.
+* $\mathcal{L}_{scl}$: Supervised Contrastive Loss <d-cite key="khosla2020supcon"></d-cite> to cluster embeddings of the same task type.
 * $\mathcal{L}_{mtl}$: Multi-Task Learning loss (masked sum of BCE/MSE/CrossEntropy for pseudo-labels).
 * $\mathcal{L}_{ortho}$: Orthogonality loss to force diverse feature extraction between the dilation branches.
 
@@ -295,14 +339,14 @@ We entered the competition late (4 weeks prior to deadline), limiting our abilit
 
   <div class="col-sm-6 d-flex justify-content-center">
     {% include figure.liquid 
-         path="assets/img/2026-04-01-Subject-Invariant-EEG/Challenge1_score.png" 
+         path="assets/img/2026-04-27-subject-invariant-eeg/Challenge1_score.png" 
          class="img-fluid" 
          caption="Figure 5: Our score and comparison to near-by entries in Challenge 1." %}
   </div>
 
   <div class="col-sm-6 d-flex justify-content-center">
     {% include figure.liquid 
-         path="assets/img/2026-04-01-Subject-Invariant-EEG/Challenge2_score.png" 
+         path="assets/img/2026-04-27-subject-invariant-eeg/Challenge2_score.png" 
          class="img-fluid" 
          caption="Figure 6: Our score and comparison to near-by entries in Challenge 2." %}
   </div>
