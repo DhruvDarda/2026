@@ -23,16 +23,20 @@ bibliography: 2026-04-27-subject-invariant-eeg.bib
 toc:
   - name: Introduction
   - name: The HBN Dataset & Challenge
-  - name: The Hypothesis
+  - name: Existing Self-Supervised Pretraining Approaches for EEG and Our Hypothesis
   - name: Methodology
     subsections:
+      - name: Architectural Motivation
       - name: The Encoder Design
       - name: Auxiliary Injection & Disentanglement
       - name: Spatial Scaling via Adjacency
       - name: Multi-Task Pseudo-Labeling
   - name: Loss Landscape
-  - name: Results & Discussion
-  - name: References
+  - name: Results & Retrospective
+    subsections:
+      - name: Performance
+      - name: What didn't work (and why)
+      - name: Future Steps
 ---
 
 ## Introduction
@@ -61,7 +65,7 @@ This attempt to decouple subject-specific noise (like age) and long-range sequen
 ## The HBN Dataset & Challenge
 
 
-{% include figure.liquid path="assets/img/2026-04-27-subject-invariant-eeg/eeg_challenge_2025.png" class="img-fluid h-80" caption="Figure 1: EEG Challenge 2025." %}<d-cite key="aristimunha2025eeg"></d-cite>
+{% include figure.liquid path="assets/img/2026-04-27-subject-invariant-eeg/eeg_challenge_2025.png" class="img-fluid h-80" caption="Figure 1: HBN-EEG Dataset and Data split. A. EEG is recorded using a 128-channel system during active tasks (i.e., with user input) or passive tasks. B. The psychopathology and demographic factors. C. The dataset split into Train, Test, and Validation." %}<d-cite key="aristimunha2025eeg"></d-cite>
 
 
 The competition utilized the Healthy Brain Network (HBN) dataset <d-cite key="alexander2017hbn"></d-cite>, comprising recordings from over 3,000 participants.
@@ -93,87 +97,82 @@ Thus the core challenge was:
 
 > **Can we learn subject-invariant, task-invariant EEG embeddings from only 2 seconds of signal?**
 
-## Existing Self-Supervised Pretraining Approaches for EEG and Our Hypothesis 
+## Existing Self-Supervised Pretraining Approaches for EEG and Our Hypothesis
 
-Self-supervised learning (SSL) has recently become the dominant paradigm for EEG pretraining, driven by the difficulty of obtaining large-scale labeled datasets.  
-Systematic surveys <d-cite key="weng2023ssl_eeg_survey"></d-cite>, <d-cite key="ding2023ssl_biomedical_review"></d-cite> categorize EEG SSL approaches into several broad families.
+Self-supervised learning (SSL) has become the standard approach for EEG representation learning, largely due to the scarcity of high-quality labeled datasets and the large inter-subject variability. Surveys on EEG and biomedical SSL <d-cite key="weng2023ssl_eeg_survey"></d-cite>, <d-cite key="ding2023ssl_biomedical_review"></d-cite> group existing methods into a few dominant paradigms.
 
-#### 1. Masked Prediction–based Methods
-Inspired by Masked Autoencoders (MAE) <d-cite key="he2022masked"></d-cite>, EEG variants randomly mask temporal segments or channels and reconstruct the missing signal.  
-Examples include Masked Reconstruction models and channel dropout reconstruction used in EEGPT <d-cite key="eegpt2024arxiv"></d-cite>.
+**Masked reconstruction methods** adapt Masked Autoencoders (MAE) <d-cite key="he2022masked"></d-cite> to EEG by masking temporal segments or channels and reconstructing the missing signal. This strategy underpins several recent EEG foundation models, including EEGPT <d-cite key="eegpt2024arxiv"></d-cite>.
 
-#### 2. Contrastive Learning
-Contrastive learning (SimCLR-style) <d-cite key="chen2020simple"></d-cite> remains the most widely used EEG SSL framework.  
-Common contrastive EEG methods include:
-- **CPC / contrastive predictive coding** <d-cite key="oord2018cpc"></d-cite>  
-- **TS-TCC (Time-Series Temporal Contrastive Coding)** <d-cite key="tstcc2021"></d-cite>  
-- **CL-TCN / temporal instance discrimination** <d-cite key="banville2021cltcn"></d-cite>  
+**Contrastive learning** remains the most widely used family of SSL techniques, extending SimCLR <d-cite key="chen2020simple"></d-cite> with EEG-specific augmentations such as channel dropout, temporal jittering, and filtering. Representative approaches include CPC <d-cite key="oord2018cpc"></d-cite>, TS-TCC <d-cite key="tstcc2021"></d-cite>, and CL-TCN <d-cite key="banville2021cltcn"></d-cite>.
 
-These approaches create augmentations such as jittering, time-warping, filtering, or channel dropout to enforce invariance.
+**Bootstrap and teacher–student methods** (e.g., BYOL <d-cite key="byol2020"></d-cite> and VICReg <d-cite key="vicreg2022"></d-cite>) have also been adapted to avoid the negatives required in contrastive learning and stabilize training on noisy EEG.
 
-#### 3. Bootstrap / Teacher–Student SSL
-Non-contrastive methods such as BYOL and VICReg have EEG extensions:
-- **BYOL-EEG** (bootstrapping features without negatives) <d-cite key="byol2020"></d-cite>  
-- **VICReg-style EEG regularization** <d-cite key="vicreg2022"></d-cite>  
+**Clustering-driven and prototype-based SSL** <d-cite key="prototype2021"></d-cite> aim to discover latent neural states by grouping or assigning EEG segments to learned prototypes without labels.
 
-Such models avoid instability arising from contrastive negatives.
+Finally, **large-scale EEG foundation models** such as EEGPT <d-cite key="eegpt2024arxiv"></d-cite> and BC-SSL <d-cite key="bcssl2023"></d-cite> combine multiple SSL paradigms—masked prediction, temporal contrast, clustering, and cross-task invariance—to produce universal EEG encoders.
 
-#### 4. Clustering-Driven SSL
-Deep clustering and prototype assignment (DeepCluster-style) have been adapted to EEG:
-- **EEG-MixMatch clustering**  
-- **Prototype-contrastive EEG objectives** <d-cite key="prototype2021"></d-cite>  
 
-These aim to group similar neural states without labels.
-These methods encourage representations that align across physiological modalities.
+### Our Hypothesis: Context Injection via Decoupling
 
-#### 5. Large-Scale Foundation Models
-Recent EEG foundation models such as **EEGPT** <d-cite key="eegpt2024arxiv"></d-cite> and **BC-SSL** <d-cite key="bcssl2023"></d-cite> combine several SSL components—masked modeling, temporal contrastive pretraining, and cross-task invariance—to produce universal EEG embeddings.
+The traditional solution to modeling long-range dependencies is to employ Recurrent Neural Networks (RNNs) or Transformers. However, attention mechanisms are compute-intensive, and the non-uniformity of task lengths makes designing a robust RNN architecture difficult.
 
-Overall, SSL for EEG spans masked modeling, contrastive learning, non-contrastive bootstrapping, clustering, cross-modal pretraining, and large-scale foundation models.
 
-#### Our Hypothesis
-However, given the massive inter-subject variability and the varying, often irregular, lengths of the six different tasks in the HBN dataset, we hypothesized that the sequence position within a task is a strong and inconsistent bias we must account for.
+### Core Idea
 
-The traditional approach to handling sequence-dependent biases and long-range dependencies (like fatigue) is to use Recurrent Neural Networks (RNNs) or Transformer-based Attention mechanisms. While Attention mechanisms are powerful, they are highly compute-intensive, a significant limitation given our restricted budget. Furthermore, the non-uniformity of task lengths made designing a single, robust RNN architecture challenging.
+We designed an autoencoder where:
 
-**Our Core Idea:** We proposed a computationally lighter solution: Use an Autoencoder where the Encoder $E(x)$ sees only the EEG, but the Decoder $D(z, a)$ sees the latent $z$ *plus* an auxiliary embedding $a$ containing demographics, task information and sequence position.
+- The **encoder** \(E(x)\) receives only the raw 2-second EEG window.  
+- The **decoder** \(D(z, a)\) receives both the latent \(z\) and an auxiliary embedding \(a\) containing:
+  - demographics,  
+  - coarse task identity, and  
+  - manually constructed sequence-position features.
 
-**The Crux of the Experiment**: By manually constructing and passing the sequence position $a$ to the decoder, we aimed to test whether this could *implicitly force the CNN Encoder to learn the required slow, long-term morphological features* that an RNN would typically capture, all while avoiding the high computational cost of a full attention model.
+The design intentionally applies **dropout to the latent \(z\)** but **not** to the auxiliary input **\(a\)**:
 
-By applying dropout to $z$ but *not* to $a$ during training, we create an information bottleneck that incentivizes the decoder to rely on $a$ for static/positional information, forcing $z$ to encode only the **residual neural dynamics**—the pure brain activity we actually care about.
+> This forces the decoder to rely on \(a\) for static, slow-varying information (subject factors, task stage), compelling the encoder to encode only the *residual fast neural dynamics*—the part we want to be subject- and task-invariant.
 
-This led to our full hypothesis: Learning subject-invariant, task-invariant EEG embeddings requires incorporating:
 
-1.  **Task-Level Cognitive Context:** A 2-second window of a "sad movie" looks different from a 2-second window of a "math problem." Without context, the model struggles to interpret the waveforms.
-2.  **Recording-Specific Demographics:** A 5-year-old's brain waves are higher amplitude and slower than a 20-year-old's. If the model doesn't account for age, it might mistake "youth" for "pathology."
-3.  **Manual Long-Range Position Information:** A 2-second window at the *start* of a task (fresh) is different from one at the *end* (fatigued). To substitute for computationally expensive RNNs and force the CNN encoder to learn slow morphological trends.
+We hypothesized that subject-invariant embeddings require explicitly factoring out three specific biases:
+
+1. **Task-level cognitive context**  
+   A 2-second window of a "sad movie" implies different neural states than a "math problem."
+
+2. **Demographic differences**  
+   Isolating age-related amplitude shifts (e.g., high-amplitude waves in children) to prevent them from being confounded with pathology.
+
+3. **Long-range sequence position**  
+   Explicitly signaling the start vs. end of a task to force the CNN to learn slow morphological trends (like habituation) that usually require RNNs.
+
+Our approach therefore aimed to approximate the benefits of long-range sequence modeling—**without** an RNN/Transformer—by making the decoder responsible for positional and demographic variation, and the encoder responsible for invariant neural representation learning.
 
 
 ## Methodology
 
 ### Architectural Motivation
 
-A single 2-second window is insufficient to predict behavioral or clinical outcomes.  
-Thus, the architecture was designed to:
+A single 2-second EEG window contains only fast, local neural dynamics, while the behavioral and cognitive variables we aim to predict (reaction time, task state, fatigue, engagement) depend on **slower, longer-range processes** that unfold across minutes. This mismatch creates a fundamental challenge: any encoder that only sees isolated 2-second segments is forced to infer complex context without access to the underlying temporal structure.
 
-- **inject longer-term position information into the decoder, not the encoder**  
-- **encourage invariance to demographics via an auxiliary encoder**
-- **predict task-specific pseudo-labels to force richer latent structure**
+The architecture addresses this by explicitly **separating what the encoder should learn (subject-invariant neural dynamics)** from what the decoder must reconstruct (context-dependent variations). This leads to three core design principles:
+
+
+- **Inject longer-term position information into the decoder, not the encoder**  
+- **Encourage invariance to demographics via an auxiliary encoder**
+- **Predict task-specific pseudo-labels to force richer latent structure**
 
 This led to a hybrid architecture consisting of:
 
-- A **multi-branch CNN encoder**  
-- A **latent bottleneck** regularized with dropout  
-- An **auxiliary encoder** (demographics + positional encoding)  
-- A **decoder** reconstructing EEG  
-- Six **task-specific MTL heads** predicting pseudo-labels  
-- **Contrastive loss** across tasks  
-- **Orthogonality constraints** on feature subspaces  
-- **Electrode distance re-weighting**
+- **Multi-branch CNN encoder** capturing multi-scale oscillatory features  
+- **Latent bottleneck** with strong regularization  
+- **Auxiliary encoder** injecting demographics and sequence-position info  
+- **Decoder** conditioned on both EEG latent and auxiliary latent  
+- **MTL heads** ensuring structured latent supervision  
+- **Spatial reweighting** using electrode geometry  
+- **Contrastive + orthogonality losses** ensuring disentangled representations
 
 ### The Encoder Design
 
-The encoder takes the raw EEG input $(B, 129, 200)$. We first broadcast the reference channel and stack it, resulting in $(B, 128, 200, 2)$.
+We have the raw EEG input of size $(B, 129, 200)$, where B is the batch size, 129 are the signal-channels (last channel is the reference channel) and 200 is the time dimension of each channel. We split the channel dimension into size 128 and 1, the last reference channel. We then broadcast the reference channel to match the size of the other channels, i.e., 128, and stack the two components onto a new dimension resulting in a tensor of size $(B, 128, 200, 2)$.
+
 
 $$
 X' \in \mathbb{R}^{B \times 128 \times 200 \times 2}
@@ -186,15 +185,15 @@ $$
 H_0 = \text{Concat}(H_{k=1}, H_{k=15}, H_{k=45})
 $$
 
-2.  **Orthogonal Feature Extraction:** We utilize two distinct convolutional branches with differing dilation rates $(1, 2, 4, 16)$ to capture long-range dependencies.
-3.  **Orthogonality Constraint:** To ensure these branches learn distinct features, we minimize the Frobenius norm of their product.
+1.  **Orthogonal Feature Extraction:** We utilize two distinct convolutional branches with differing dilation rates $(1, 2, 4, 16)$ to capture long-range dependencies.
+2.  **Orthogonality Constraint:** To ensure these branches learn distinct features, we minimize the Frobenius norm of their product.
 
 $$
 \mathcal{L}_{\text{ortho}}
-= \left\| A^\top B \right\|_F^2
+= \left\| H_1^\top H_2 \right\|_F^2
 $$
 
-where \( $ A, B \in \mathbb{R}^{B \times T \times d} $ \) are flattened feature maps.
+where \( $ H_1, H_2 \in \mathbb{R}^{B \times T \times d} $ \) are flattened feature maps.
 
 
 {% include figure.liquid path="assets/img/2026-04-27-subject-invariant-eeg/model_architecture.png" class="img-fluid w-80 h-70" caption="Figure 2: The proposed architecture. Note the Auxiliary Encoder injecting demographics and sequence position directly into the latent space before decoding." %}
@@ -203,7 +202,7 @@ where \( $ A, B \in \mathbb{R}^{B \times T \times d} $ \) are flattened feature 
 
 The decoder must know which part of the original EEG sequence the 2-second window corresponds to.
 
-We manually constructed:
+We manually constructed positional encodings that representing EEG’s temporal structure:
 
 - **Linear ramp**
 - **Exponential decay**
@@ -320,12 +319,6 @@ Where:
 * $\mathcal{L}_{mtl}$: Multi-Task Learning loss (masked sum of BCE/MSE/CrossEntropy for pseudo-labels).
 * $\mathcal{L}_{ortho}$: Orthogonality loss to force diverse feature extraction between the dilation branches.
 
-Given two feature matrices $A$ and $B$ from the parallel branches, the orthogonal loss is defined as:
-
-$$
-\mathcal{L}_{ortho} = || A^T B ||_F^2 \approx 0
-$$
-
 The weighting was crucial. We used $\lambda_{recon}=1.0$, $\lambda_{mtl}=1.0$, but kept contrastive loss low ($\lambda_{scl}=0.001$) to prevent collapse, and $\lambda_{ortho}=0.1$.
 
 ## Results & Retrospective
@@ -354,6 +347,7 @@ We entered the competition late (4 weeks prior to deadline), limiting our abilit
 </div>
 
 
+The metric used for both regression challenges 1 and 2 were the normalized root mean square error for the response time prediction and the psychopathology factor prediction.
 
 | Metric | Our Score | Top scores | Rank |
 | :--- | :--- | :--- | :--- |
